@@ -235,8 +235,8 @@ module Kubeclient
           create_entity(entity.entity_type, entity.resource_name, entity_config)
         end
 
-        define_singleton_method("update_#{entity.method_names[0]}") do |entity_config|
-          update_entity(entity.resource_name, entity_config)
+        define_singleton_method("update_#{entity.method_names[0]}") do |entity_config, opts = {}|
+          update_entity(entity.resource_name, entity_config, opts)
         end
 
         define_singleton_method("patch_#{entity.method_names[0]}") \
@@ -384,11 +384,14 @@ module Kubeclient
       format_response(@as, response.body)
     end
 
-    def update_entity(resource_name, entity_config)
+    def update_entity(resource_name, entity_config, update_options)
+      dryRun    = update_options[:dryRun] || false
       name      = entity_config[:metadata][:name]
       ns_prefix = build_namespace_prefix(entity_config[:metadata][:namespace])
       response = handle_exception do
-        rest_client[ns_prefix + resource_name + "/#{name}"]
+        url = ns_prefix + resource_name + "/#{name}"
+        url += "?dryRun=#{dryRun}" if dryRun
+        rest_client[url]
           .put(entity_config.to_h.to_json, { 'Content-Type' => 'application/json' }.merge(@headers))
       end
       format_response(@as, response.body)

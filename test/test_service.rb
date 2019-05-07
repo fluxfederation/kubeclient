@@ -243,6 +243,30 @@ class TestService < MiniTest::Test
     end
   end
 
+  def test_update_service_with_dry_run
+    service = Kubeclient::Resource.new
+    name = 'my_service'
+
+    service.metadata = {}
+    service.metadata.name      = name
+    service.metadata.namespace = 'development'
+
+    stub_core_api_list
+    expected_url = "http://localhost:8080/api/v1/namespaces/development/services/#{name}?dryRun=All"
+    stub_request(:put, expected_url)
+      .to_return(body: open_test_file('service_update.json'), status: 201)
+
+    client = Kubeclient::Client.new('http://localhost:8080/api/', 'v1')
+    service = client.update_service(service, {dryRun: "All"})
+    assert_kind_of(RecursiveOpenStruct, service)
+
+    assert_requested(:put, expected_url, times: 1) do |req|
+      data = JSON.parse(req.body)
+      data['metadata']['name'] == name &&
+        data['metadata']['namespace'] == 'development'
+    end
+  end
+
   def test_patch_service
     service = Kubeclient::Resource.new
     name = 'my_service'
