@@ -240,18 +240,18 @@ module Kubeclient
         end
 
         define_singleton_method("patch_#{entity.method_names[0]}") \
-        do |name, patch, namespace = nil|
-          patch_entity(entity.resource_name, name, patch, 'strategic-merge-patch', namespace)
+        do |name, patch, namespace = nil, opts = {}|
+          patch_entity(entity.resource_name, name, patch, 'strategic-merge-patch', namespace, opts)
         end
 
         define_singleton_method("json_patch_#{entity.method_names[0]}") \
-        do |name, patch, namespace = nil|
-          patch_entity(entity.resource_name, name, patch, 'json-patch', namespace)
+        do |name, patch, namespace = nil, opts = {}|
+          patch_entity(entity.resource_name, name, patch, 'json-patch', namespace, opts)
         end
 
         define_singleton_method("merge_patch_#{entity.method_names[0]}") \
-        do |name, patch, namespace = nil|
-          patch_entity(entity.resource_name, name, patch, 'merge-patch', namespace)
+        do |name, patch, namespace = nil, opts = {}|
+          patch_entity(entity.resource_name, name, patch, 'merge-patch', namespace, opts)
         end
       end
     end
@@ -397,10 +397,13 @@ module Kubeclient
       format_response(@as, response.body)
     end
 
-    def patch_entity(resource_name, name, patch, strategy, namespace)
+    def patch_entity(resource_name, name, patch, strategy, namespace, patch_options)
+      dryRun    = patch_options[:dryRun] || false
       ns_prefix = build_namespace_prefix(namespace)
       response = handle_exception do
-        rest_client[ns_prefix + resource_name + "/#{name}"]
+        url = ns_prefix + resource_name + "/#{name}"
+        url += "?dryRun=#{dryRun}" if dryRun
+        rest_client[url]
           .patch(
             patch.to_json,
             { 'Content-Type' => "application/#{strategy}+json" }.merge(@headers)
